@@ -18,20 +18,23 @@ Monday.
 
 ## 1. Functional requirements
 
-1. A student can compose and send a message tagged to a specific course (and
+1. A student or instructor logs in with a university-issued ID and password
+   before accessing any course conversation.
+2. A student can compose and send a message tagged to a specific course (and
    optionally an assignment) to the course instructor.
-2. An instructor receives an in-app notification when a new message arrives,
+3. An instructor receives an in-app notification when a new message arrives,
    without needing email or Moodle.
-3. A message thread shows status: sent, seen, replied.
-4. A student is notified when the instructor replies.
-5. An instructor can mark a thread as resolved.
-6. A teaching assistant can be added to a course's threads to help answer
-   questions when the instructor is unavailable.
-7. An instructor can set an availability status (available/away), visible to
+4. A message thread shows status: sent, seen, replied.
+5. A student is notified when the instructor replies.
+6. An instructor can mark a thread as resolved.
+7. A teaching assistant can be looped into a thread, turning it into a group
+   chat with the student and instructor; the TA gets student-level
+   permissions in that chat.
+8. An instructor can set an availability status (available/away), visible to
    students before they send a message.
-8. A student can search past message threads by course or keyword.
-9. If a message goes unanswered for 2 hours, the student can flag it as
-   urgent.
+9. A student can search past message threads by course or keyword.
+10. If a message goes unanswered for 2 hours, the student can flag it as
+    urgent.
 
 ---
 
@@ -41,7 +44,7 @@ Monday.
 |---|---|---|
 | Performance | First screen (inbox) usable within 2 seconds on 4G. | Chrome DevTools "Fast 4G" throttling profile, tested on a team laptop against the Netlify dev URL; record Time to Interactive from Lighthouse, with device/browser and date. |
 | Accessibility | Main tasks (login, compose/send a message, read inbox) work by keyboard only; axe reports 0 serious issues. | Tab through each task with no mouse; run axe DevTools on each page; record page, task, keyboard result, axe serious-issue count, and date. |
-| Security | Row Level Security enabled on every Supabase table; a test user cannot access another user's private records. | For each table, sign in as Test User A and attempt to read/write Test User B's records; confirm 0 rows / permission denied. Record table name, RLS status, test result, date. |
+| Security | Row Level Security enabled on every Supabase table; a test user cannot access another user's private records. Login uses university-issued IDs/passwords checked against Supabase Auth. | For each table, sign in as Test User A and attempt to read/write Test User B's records; confirm 0 rows / permission denied. Record table name, RLS status, test result, date. |
 | Privacy | 0 real personal-data fields in client records used for the app, prompts, or repository. | Fields stored: name, student ID, course name (see justification below). All seed/test data is fictional. Grep the repo for real names/emails before each commit and demo. |
 | Availability | Dev URL works during all class hours (every Monday); same-day rollback after a failed deployment. | Visit the dev URL at the start of each Monday class; log status and timestamp. If a deploy breaks the app, roll back to the last working Netlify deploy the same day and log the incident and resolution time. |
 
@@ -102,13 +105,14 @@ have to keep re-checking the app.
   course and a preview of the reply.
 
 ### Story 6 — Teaching assistant looped in
-As a teaching assistant, I want to be looped into a course's threads, so I
-can help answer questions when the instructor is unavailable.
+As an instructor, I want to loop a TA into a thread, so the TA can help
+answer without getting full instructor permissions.
 
-- Given a TA has been added to a course by the instructor,
-  when a student sends a message in that course,
-  then the TA sees the message in their inbox alongside the instructor, and
-  can reply on the instructor's behalf.
+- Given an instructor is viewing a thread with a student,
+  when the instructor adds a TA to that thread,
+  then the thread becomes a group chat with the student, instructor, and TA;
+  the TA can view and send messages like a student can, but cannot mark the
+  thread resolved or change the instructor's availability status.
 
 ### Story 7 — Availability status
 As an instructor, I want to set an "available" / "away" status, so students
@@ -128,27 +132,38 @@ find an answer without re-asking.
   then matching threads are listed, ranked by relevance/recency, within
   2 seconds.
 
+### Story 9 — University login
+As a student or instructor, I want to log in with my university-issued ID
+and password, so that only verified members of my university can access
+course conversations.
+
+- Given a student or instructor has university-issued login credentials,
+  when they enter their ID and password on the login screen,
+  then they are authenticated and taken to their inbox; an incorrect
+  ID/password shows an error and does not grant access.
+
 ---
 
 ## 4. Events
 
 Client task: a student asks a question and gets a timely instructor reply.
 
-1. Command: Compose message (student) → Event: Message was composed.
-2. Command: Send message (student) → Event: Message was sent.
-3. Command: Deliver notification (system, on message sent) → Event: Instructor was notified.
-4. Command: Open thread (instructor) → Event: Message was read.
-5. Command: Send reply (instructor) → Event: Reply was sent.
-6. Command: Deliver notification (system, on reply sent) → Event: Student was notified.
-7. Command: Open thread (student) → Event: Reply was read.
-8. Command: Mark thread resolved (instructor) → Event: Thread was resolved.
+1. Command: Log in (student or instructor) → Event: User was authenticated.
+2. Command: Compose message (student) → Event: Message was composed.
+3. Command: Send message (student) → Event: Message was sent.
+4. Command: Deliver notification (system, on message sent) → Event: Instructor was notified.
+5. Command: Open thread (instructor) → Event: Message was read.
+6. Command: Send reply (instructor) → Event: Reply was sent.
+7. Command: Deliver notification (system, on reply sent) → Event: Student was notified.
+8. Command: Open thread (student) → Event: Reply was read.
+9. Command: Mark thread resolved (instructor) → Event: Thread was resolved.
 
 ---
 
 ## 5. Milestones
 
 1. Requirements gate (G2) closed: functional/non-functional requirements,
-   eight user stories, events and milestones finalized and posted to Moodle.
+   nine user stories, events and milestones finalized and posted to Moodle.
 2. Core messaging live: student-to-instructor tagged messaging deployed to
    the Netlify dev URL with Row Level Security enabled on all Supabase
    tables.
